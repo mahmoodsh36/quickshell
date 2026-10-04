@@ -1,20 +1,22 @@
 pragma Singleton
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Wayland
 import Quickshell.Widgets
 import QtQuick
 
 // fuzzy app launcher. Super+R (xremap), or qs ipc call launcher toggle.
-// the popup title matches the float/pin/focus rules in hyprland.lua.
 Singleton {
   id: root
   property bool open: false
   property string query: ""
   property int selected: 0
+  readonly property string terminal: "wezterm"
 
   function show() {
-    query = "";
-    selected = 0;
     input.text = "";
+    var name = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "";
+    window.screen = Quickshell.screens.find(s => s.name === name) || Quickshell.screens[0];
     open = true;
     input.forceActiveFocus();
   }
@@ -28,56 +30,63 @@ Singleton {
       show();
   }
 
-  // applications already excludes Hidden/NoDisplay entries
-  property var apps: {
-    DesktopEntries.applications.values;
-    return DesktopEntries.applications.values;
-  }
-
   function score(entry, q) {
     var name = (entry.name || "").toLowerCase();
-    if (q === "")
+    if (name.startsWith(q))
       return 0;
-    if (name.indexOf(q) === 0)
-      return 0;
-    if (name.indexOf(q) !== -1)
+    if (name.includes(q))
       return 1;
-    var hay = ((entry.genericName || "") + " " + (entry.comment || "")).toLowerCase();
-    return hay.indexOf(q) !== -1 ? 2 : -1;
+    var hay = [entry.genericName, entry.comment].concat(Array.from(entry.keywords || [])).join(" ").toLowerCase();
+    return hay.includes(q) ? 2 : -1;
   }
 
+  // applications already excludes Hidden/NoDisplay entries
   property var filtered: {
     var q = query.trim().toLowerCase();
-    var out = [];
-    for (var i = 0; i < apps.length; i++) {
-      var s = score(apps[i], q);
-      if (s >= 0)
-        out.push([s, (apps[i].name || "").toLowerCase(), apps[i]]);
-    }
-    out.sort(function(a, b) {
-      return a[0] - b[0] || (a[1] < b[1] ? -1 : (a[1] > b[1] ? 1 : 0));
-    });
-    return out.slice(0, 9).map(function(x) {
-      return x[2];
-    });
+    return Array.from(DesktopEntries.applications.values)
+      .map(e => ({ s: score(e, q), name: (e.name || "").toLowerCase(), e: e }))
+      .filter(x => x.s >= 0)
+      .sort((a, b) => a.s - b.s || a.name.localeCompare(b.name))
+      .slice(0, 9)
+      .map(x => x.e);
   }
 
   property var current: filtered.length > 0 ? filtered[Math.min(selected, filtered.length - 1)] : null
 
-  // execute() ignores runInTerminal, so terminal-only entries stay broken
+  // execute() ignores runInTerminal
   function launch(entry) {
-    if (entry) {
+    if (!entry)
+      return;
+    if (entry.runInTerminal) {
+      var ctx = { command: [terminal, "start", "--"].concat(Array.from(entry.command)) };
+      if (entry.workingDirectory)
+        ctx.workingDirectory = entry.workingDirectory;
+      Quickshell.execDetached(ctx);
+    } else {
       entry.execute();
-      hide();
     }
+    hide();
   }
 
-  FloatingWindow {
-    title: "qs-launcher-popup"
+  function move(d) {
+    selected = Math.max(0, Math.min(selected + d, filtered.length - 1));
+  }
+
+  PanelWindow {
+    id: window
     visible: root.open
-    width: 520
-    height: 20 + 44 + 8 + Math.max(root.filtered.length, 1) * 44
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    exclusionMode: ExclusionMode.Ignore
+    implicitWidth: 520
+    implicitHeight: content.implicitHeight + 20
     color: "transparent"
+
+    HyprlandFocusGrab {
+      active: window.visible
+      windows: [window]
+      onCleared: root.hide()
+    }
 
     Rectangle {
       anchors.fill: parent
@@ -103,6 +112,7 @@ Singleton {
             anchors.leftMargin: 12
             anchors.rightMargin: 12
             verticalAlignment: TextInput.AlignVCenter
+            focus: true
             color: Theme.fg
             font.family: Theme.font
             font.pixelSize: 15
@@ -112,16 +122,16 @@ Singleton {
             }
             onAccepted: root.launch(root.current)
             Keys.onPressed: event => {
-              if (event.key === Qt.Key_Escape) {
+              var ctrl = event.modifiers & Qt.ControlModifier;
+              if (event.key === Qt.Key_Escape)
                 root.hide();
-                event.accepted = true;
-              } else if (event.key === Qt.Key_Down) {
-                root.selected = Math.min(root.selected + 1, root.filtered.length - 1);
-                event.accepted = true;
-              } else if (event.key === Qt.Key_Up) {
-                root.selected = Math.max(root.selected - 1, 0);
-                event.accepted = true;
-              }
+              else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || (ctrl && event.key === Qt.Key_N))
+                root.move(1);
+              else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab || (ctrl && event.key === Qt.Key_P))
+                root.move(-1);
+              else
+                return;
+              event.accepted = true;
             }
           }
         }
@@ -129,9 +139,10 @@ Singleton {
         Repeater {
           model: root.filtered
           Rectangle {
+            id: row
             required property var modelData
             required property int index
-            property bool isCurrent: index === root.selected
+            readonly property bool isCurrent: index === root.selected
             width: content.width
             height: 40
             radius: Theme.radius
@@ -143,28 +154,25 @@ Singleton {
               spacing: 10
               IconImage {
                 anchors.verticalCenter: parent.verticalCenter
-                source: modelData.icon
+                source: Quickshell.iconPath(row.modelData.icon, true)
                 implicitSize: 24
               }
               Column {
                 anchors.verticalCenter: parent.verticalCenter
-                Text {
-                  text: modelData.name
-                  color: isCurrent ? Theme.yellow : Theme.fg
-                  font.family: Theme.font
-                  font.pixelSize: Theme.fontSize
+                Label {
+                  text: row.modelData.name
+                  color: row.isCurrent ? Theme.yellow : Theme.fg
                   Behavior on color {
                     ColorAnimation {
                       duration: 120
                     }
                   }
                 }
-                Text {
-                  visible: modelData.genericName !== ""
-                  text: modelData.genericName
+                Label {
+                  visible: text !== ""
+                  text: row.modelData.genericName
                   color: Theme.dim
-                  font.family: Theme.font
-                  font.pixelSize: 11
+                  font.pixelSize: Theme.fontSizeSmall
                 }
               }
             }
@@ -172,13 +180,13 @@ Singleton {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
               hoverEnabled: true
-              onEntered: root.selected = index
-              onClicked: root.launch(modelData)
+              onEntered: root.selected = row.index
+              onClicked: root.launch(row.modelData)
             }
           }
         }
 
-        Text {
+        Label {
           visible: root.filtered.length === 0
           width: content.width
           height: 44
@@ -186,8 +194,6 @@ Singleton {
           horizontalAlignment: Text.AlignHCenter
           text: "no match"
           color: Theme.dim
-          font.family: Theme.font
-          font.pixelSize: Theme.fontSize
         }
       }
     }

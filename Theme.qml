@@ -7,8 +7,6 @@ import QtQuick
 Singleton {
   id: root
 
-  readonly property var themeNames: ["gruvbox", "tokyonight"]
-
   readonly property var palettes: {
     "gruvbox": {
       "bg": "#282828", "bg1": "#3c3836", "bg2": "#504945",
@@ -24,9 +22,9 @@ Singleton {
     }
   }
 
-  // state lives beside the config, not in it: the config dir is a
-  // read-only nix store path, and home-manager must not own this file
-  // either (it would reset the theme on every rebuild).
+  readonly property var themeNames: Object.keys(palettes)
+
+  // outside the read-only config dir and home-manager, which would reset it on rebuild
   FileView {
     id: stateFile
     path: Quickshell.env("HOME") + "/.config/quickshell/shell-state.json"
@@ -74,4 +72,5 @@ Singleton {
   readonly property int radius: 6
   readonly property string font: "monospace"
   readonly property int fontSize: 13
+  readonly property int fontSizeSmall: 11
 }

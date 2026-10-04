@@ -1,8 +1,9 @@
 import Quickshell
 import Quickshell.Io
+import QtQuick
 
 // entry point, run with: qs
-// switch theme live: qs ipc call theme set nord | next | get | list
+// switch theme live: qs ipc call theme set <name> | next | get | list
 ShellRoot {
   IpcHandler {
     target: "theme"
@@ -21,7 +22,15 @@ ShellRoot {
     }
   }
 
-  Bar {}
+  Bar {
+    id: bar
+  }
+
+  Binding {
+    target: ControlCenter
+    property: "barWindows"
+    value: bar.windows
+  }
 
   IpcHandler {
     target: "launcher"
