@@ -5,22 +5,29 @@ Rectangle {
   property bool checked: false
   signal toggled
 
-  implicitWidth: 52
-  implicitHeight: 24
-  radius: 12
-  color: checked ? Theme.green : Theme.bg2
+  implicitWidth: 40
+  implicitHeight: 22
+  radius: height / 2
+  color: checked ? Theme.accent : Theme.bg2
   Behavior on color {
     ColorAnimation {
       duration: 150
     }
   }
 
-  Label {
-    anchors.centerIn: parent
-    text: toggle.checked ? "ON" : "OFF"
-    color: Theme.bg
-    font.pixelSize: Theme.fontSizeSmall
-    font.bold: true
+  Rectangle {
+    width: 16
+    height: 16
+    radius: 8
+    anchors.verticalCenter: parent.verticalCenter
+    x: toggle.checked ? parent.width - width - 3 : 3
+    color: toggle.checked ? Theme.bg : Theme.dim
+    Behavior on x {
+      NumberAnimation {
+        duration: 150
+        easing.type: Easing.OutCubic
+      }
+    }
   }
   MouseArea {
     anchors.fill: parent

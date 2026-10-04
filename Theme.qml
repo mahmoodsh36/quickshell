@@ -68,9 +68,18 @@ Singleton {
     setTheme(themeNames[(themeNames.indexOf(themeName) + 1) % themeNames.length]);
   }
 
+  readonly property color accent: yellow
+
+  // c with a faint fg wash
+  function hover(c) {
+    var wash = Qt.rgba(fg.r, fg.g, fg.b, 0.08);
+    return c.a === 0 ? wash : Qt.tint(c, wash);
+  }
+
   readonly property int barHeight: 34
   readonly property int radius: 6
   readonly property string font: "monospace"
+  readonly property string iconFont: "Material Symbols Rounded"
   readonly property int fontSize: 13
   readonly property int fontSizeSmall: 11
 }

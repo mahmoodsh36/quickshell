@@ -31,6 +31,19 @@ ShellRoot {
     property: "barWindows"
     value: bar.windows
   }
+  Binding {
+    target: Calendar
+    property: "barWindows"
+    value: bar.windows
+  }
+
+  IpcHandler {
+    target: "calendar"
+
+    function toggle(): void {
+      Calendar.toggle();
+    }
+  }
 
   IpcHandler {
     target: "launcher"

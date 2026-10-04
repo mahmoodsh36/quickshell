@@ -21,24 +21,35 @@ Item {
   }
   Rectangle {
     anchors.verticalCenter: parent.verticalCenter
-    width: parent.width * slider.value
+    width: Math.max(6, parent.width * slider.value)
     height: 6
     radius: 3
-    color: Theme.yellow
+    color: Theme.accent
   }
   Rectangle {
+    property real d: mouse.pressed ? 16 : (mouse.containsMouse ? 14 : 12)
     anchors.verticalCenter: parent.verticalCenter
-    x: parent.width * slider.value - 7
-    width: 14
-    height: 14
-    radius: 7
+    x: (parent.width - width) * slider.value
+    width: d
+    height: d
+    radius: d / 2
     color: Theme.fg
+    Behavior on d {
+      NumberAnimation {
+        duration: 100
+      }
+    }
   }
   MouseArea {
+    id: mouse
     anchors.fill: parent
+    hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    onPressed: mouse => slider.moved(slider.at(mouse.x))
-    onPositionChanged: mouse => slider.moved(slider.at(mouse.x))
-    onReleased: mouse => slider.released(slider.at(mouse.x))
+    onPressed: event => slider.moved(slider.at(event.x))
+    onPositionChanged: event => {
+      if (pressed)
+        slider.moved(slider.at(event.x));
+    }
+    onReleased: event => slider.released(slider.at(event.x))
   }
 }

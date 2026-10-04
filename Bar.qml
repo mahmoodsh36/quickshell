@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Networking
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import Quickshell.Widgets
@@ -20,8 +21,56 @@ Scope {
 
   property var bat: UPower.displayDevice
   property bool hasBat: bat !== null && bat.isLaptopBattery
-  property int batPct: hasBat ? Math.round(bat.percentage) : 0
+  // upower reports 0..1
+  property int batPct: hasBat ? Math.round(bat.percentage * 100) : 0
   property bool charging: hasBat && bat.state === UPowerDeviceState.Charging
+
+  function batIcon() {
+    if (charging)
+      return "battery_charging_full";
+    return batPct >= 95 ? "battery_full" : "battery_" + Math.round(batPct / 100 * 6) + "_bar";
+  }
+  function wifiIcon() {
+    var net = ControlCenter.wifiNetwork;
+    if (!Networking.wifiEnabled)
+      return "wifi_off";
+    if (!net)
+      return "signal_wifi_0_bar";
+    var s = net.signalStrength;
+    return s > 0.75 ? "signal_wifi_4_bar" : s > 0.5 ? "network_wifi_3_bar" : s > 0.25 ? "network_wifi_2_bar" : "network_wifi_1_bar";
+  }
+
+  component Pill: Rectangle {
+    id: pill
+    default property alias content: row.data
+    // its popup is open
+    property bool active: false
+    signal clicked
+    visible: row.implicitWidth > 0
+    implicitWidth: row.implicitWidth + 16
+    implicitHeight: 26
+    radius: 13
+    color: active || pillMouse.containsMouse ? Theme.bg2 : Theme.bg1
+    border.width: active ? 1 : 0
+    border.color: Theme.accent
+    Behavior on color {
+      ColorAnimation {
+        duration: 120
+      }
+    }
+    MouseArea {
+      id: pillMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: pill.clicked()
+    }
+    Row {
+      id: row
+      anchors.centerIn: parent
+      spacing: 6
+    }
+  }
 
   SystemClock {
     id: clock
@@ -51,12 +100,13 @@ Scope {
         anchors.rightMargin: 8
         spacing: 8
 
-        Label {
-          text: "⚙"
-          color: Theme.yellow
-          font.pixelSize: Theme.fontSize + 2
-          clickable: true
+        Pill {
+          active: ControlCenter.open && ControlCenter.side === "left"
           onClicked: ControlCenter.toggle("left")
+          Icon {
+            name: "tune"
+            color: Theme.accent
+          }
         }
 
         Item {
@@ -129,11 +179,8 @@ Scope {
           color: Theme.blue
         }
 
-        Label {
-          visible: Audio.ok
-          text: "♪ " + (Audio.muted ? "MUTE" : Math.round(Audio.volume * 100) + "%")
-          color: Audio.muted ? Theme.red : Theme.green
-          clickable: true
+        Pill {
+          active: ControlCenter.open && ControlCenter.side === "right"
           onClicked: ControlCenter.toggle("right")
           WheelHandler {
             // one step per 120, touchpads send small deltas
@@ -147,18 +194,54 @@ Scope {
               }
             }
           }
+          Icon {
+            visible: ControlCenter.wifiDevice !== null
+            name: root.wifiIcon()
+            size: 16
+          }
+          Icon {
+            visible: ControlCenter.btOn
+            name: ControlCenter.btConnected.length > 0 ? "bluetooth_connected" : "bluetooth"
+            size: 16
+          }
+          Icon {
+            visible: Audio.ok
+            name: Audio.muted ? "volume_off" : Audio.volume < 0.5 ? "volume_down" : "volume_up"
+            size: 16
+            color: Audio.muted ? Theme.red : Theme.fg
+          }
+          Label {
+            visible: Audio.ok && !Audio.muted
+            anchors.verticalCenter: parent.verticalCenter
+            text: Math.round(Audio.volume * 100) + "%"
+          }
+          Icon {
+            visible: root.hasBat
+            name: root.batIcon()
+            size: 16
+            rotation: 90
+            color: root.batPct < 20 && !root.charging ? Theme.red : Theme.fg
+          }
+          Label {
+            visible: root.hasBat
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.batPct + "%"
+            color: root.batPct < 20 && !root.charging ? Theme.red : Theme.fg
+          }
         }
 
-        Label {
-          visible: root.hasBat
-          text: "BAT " + root.batPct + "%" + (root.charging ? "+" : "")
-          color: root.batPct < 20 && !root.charging ? Theme.red : Theme.fg
-          clickable: true
-          onClicked: ControlCenter.toggle("right")
-        }
-
-        Label {
-          text: Qt.formatDateTime(clock.date, "ddd d MMM  hh:mm")
+        Pill {
+          active: Calendar.open
+          onClicked: Calendar.toggle()
+          Icon {
+            name: "calendar_month"
+            size: 16
+            color: Calendar.open ? Theme.accent : Theme.fg
+          }
+          Label {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.formatDateTime(clock.date, "ddd d MMM  hh:mm")
+          }
         }
 
         Repeater {
