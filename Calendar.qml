@@ -36,6 +36,7 @@ Singleton {
   function show() {
     ControlCenter.hide();
     today = new Date();
+    cache = {};
     goTo(today);
     open = true;
     fetch(true);
@@ -106,6 +107,21 @@ Singleton {
     for (var k in out)
       out[k].sort((a, b) => a.done - b.done || b.all_day - a.all_day || a.begin.localeCompare(b.begin));
     return out;
+  }
+
+  // open at login
+  Component.onCompleted: show()
+
+  // refetch and roll today over while open
+  Timer {
+    interval: 5 * 60 * 1000
+    running: root.open
+    repeat: true
+    onTriggered: {
+      root.today = new Date();
+      root.cache = {};
+      root.fetch(true);
+    }
   }
 
   Process {
