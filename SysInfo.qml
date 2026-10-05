@@ -163,25 +163,6 @@ Singleton {
     onTriggered: root.refresh()
   }
 
-  component Meter: Rectangle {
-    id: meter
-    property real value: 0
-    height: 6
-    radius: 3
-    color: Theme.bg2
-    Rectangle {
-      width: Math.max(6, meter.width * Math.min(1, meter.value))
-      height: meter.height
-      radius: 3
-      color: root.levelColor(meter.value)
-      Behavior on width {
-        NumberAnimation {
-          duration: 200
-        }
-      }
-    }
-  }
-
   // label, right-aligned value, meter
   component Stat: Column {
     id: st
@@ -220,7 +201,8 @@ Singleton {
     Meter {
       visible: st.value >= 0
       width: parent.width
-      value: Math.max(0, st.value)
+      value: st.value
+      fill: root.levelColor(st.value)
     }
   }
 

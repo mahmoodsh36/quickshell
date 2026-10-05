@@ -7,6 +7,8 @@ Rectangle {
   property string title
   property string subtitle
   property bool active: false
+  // shows the chevron
+  property bool expandable: true
   signal toggled
   signal opened
 
@@ -75,6 +77,7 @@ Rectangle {
 
   Rectangle {
     id: divider
+    visible: tile.expandable
     anchors.right: more.left
     anchors.verticalCenter: parent.verticalCenter
     width: 1
@@ -88,7 +91,8 @@ Rectangle {
     anchors.right: parent.right
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    width: 34
+    width: tile.expandable ? 34 : 0
+    visible: tile.expandable
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onClicked: tile.opened()

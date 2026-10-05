@@ -5,6 +5,9 @@ import QtQuick
 // entry point, run with: qs
 // switch theme live: qs ipc call theme set <name> | next | get | list
 ShellRoot {
+  // singletons load lazily, these have to run from startup
+  readonly property var services: [Osd, Notifs]
+
   IpcHandler {
     target: "theme"
 
@@ -62,7 +65,10 @@ ShellRoot {
     target: "launcher"
 
     function toggle(): void {
-      Launcher.toggle();
+      Launcher.toggle("apps");
+    }
+    function clipboard(): void {
+      Launcher.toggle("clipboard");
     }
     function show(): void {
       Launcher.show();
@@ -83,6 +89,50 @@ ShellRoot {
     }
     function hide(): void {
       ControlCenter.hide();
+    }
+  }
+
+  IpcHandler {
+    target: "volume"
+
+    function up(): void {
+      Audio.step(0.05);
+    }
+    function down(): void {
+      Audio.step(-0.05);
+    }
+    function mute(): void {
+      Audio.toggleMute();
+    }
+  }
+
+  IpcHandler {
+    target: "brightness"
+
+    function up(): void {
+      Brightness.step(0.05);
+    }
+    function down(): void {
+      Brightness.step(-0.05);
+    }
+  }
+
+  IpcHandler {
+    target: "nightlight"
+
+    function toggle(): void {
+      NightLight.toggle();
+    }
+  }
+
+  IpcHandler {
+    target: "recorder"
+
+    function toggle(): void {
+      Recorder.toggle(false);
+    }
+    function region(): void {
+      Recorder.toggle(true);
     }
   }
 }

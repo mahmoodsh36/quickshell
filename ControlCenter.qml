@@ -2,7 +2,6 @@ pragma Singleton
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Hyprland
-import Quickshell.Io
 import Quickshell.Networking
 import QtQuick
 import QtQuick.Layouts
@@ -13,7 +12,7 @@ Singleton {
   property bool open: false
   // panel drops below the button that opened it
   property string side: "right"
-  // main, wifi or bluetooth
+  // main, wifi, bluetooth or notifications
   property string page: "main"
   // in the focus grab so bar clicks don't close the panel
   property var barWindows: []
@@ -24,7 +23,7 @@ Singleton {
     side = s || "right";
     page = "main";
     open = true;
-    brightProc.exec(["brightnessctl", "-m", "-c", "backlight"]);
+    Brightness.refresh();
   }
   function hide() {
     open = false;
@@ -43,27 +42,39 @@ Singleton {
   readonly property bool btOn: !!btAdapter && btAdapter.enabled
   readonly property var btConnected: btAdapter ? Array.from(btAdapter.devices.values).filter(d => d.connected) : []
 
-  // no change events, so read on open
-  property real bright: 0
-  property bool brightOk: false
-  property real brightDrag: -1
-
-  Process {
-    id: brightProc
-    stdout: StdioCollector {
-      // -m prints device,class,current,percent,max
-      onStreamFinished: {
-        var f = text.trim().split("\n")[0].split(",");
-        root.brightOk = f.length >= 5 && Number(f[4]) > 0;
-        if (root.brightOk)
-          root.bright = Number(f[2]) / Number(f[4]);
-        root.brightDrag = -1;
-      }
-    }
+  // closes the panel first, so it isn't captured or holding focus
+  function launch(fn) {
+    hide();
+    afterHide.fn = fn;
+    afterHide.restart();
+  }
+  Timer {
+    id: afterHide
+    property var fn: null
+    interval: 150
+    onTriggered: fn()
   }
 
-  function setBright(v) {
-    brightProc.exec(["sh", "-c", "brightnessctl -q -c backlight s \"$1\"; brightnessctl -m -c backlight", "sh", Math.round(v * 100) + "%"]);
+  component Action: Column {
+    id: action
+    property alias icon: btn.icon
+    property alias iconColor: btn.iconColor
+    property string text
+    signal clicked
+    spacing: 4
+    IconButton {
+      id: btn
+      anchors.horizontalCenter: parent.horizontalCenter
+      size: 40
+      tint: Theme.bg1
+      onClicked: action.clicked()
+    }
+    Label {
+      anchors.horizontalCenter: parent.horizontalCenter
+      text: action.text
+      color: Theme.dim
+      font.pixelSize: Theme.fontSizeSmall
+    }
   }
 
   property string armed: ""
@@ -137,7 +148,7 @@ Singleton {
           id: content
           anchors.fill: parent
           anchors.margins: 16
-          implicitHeight: root.page === "wifi" ? wifiPage.implicitHeight : root.page === "bluetooth" ? btPage.implicitHeight : mainPage.implicitHeight
+          implicitHeight: root.page === "wifi" ? wifiPage.implicitHeight : root.page === "bluetooth" ? btPage.implicitHeight : root.page === "notifications" ? notifPage.implicitHeight : mainPage.implicitHeight
 
           Column {
             id: mainPage
@@ -173,8 +184,79 @@ Singleton {
               }
             }
 
+            RowLayout {
+              width: parent.width
+              spacing: 10
+              QuickTile {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                expandable: false
+                icon: "nightlight"
+                title: "Night light"
+                subtitle: NightLight.active ? NightLight.temp + "K" : "Off"
+                active: NightLight.active
+                onToggled: NightLight.toggle()
+              }
+              QuickTile {
+                Layout.fillWidth: true
+                Layout.preferredWidth: 1
+                icon: Notifs.dnd ? "notifications_off" : "notifications"
+                title: "Do not disturb"
+                subtitle: Notifs.history.length === 0 ? "No notifications" : Notifs.history.length + " notification" + (Notifs.history.length === 1 ? "" : "s")
+                active: Notifs.dnd
+                onToggled: Notifs.dnd = !Notifs.dnd
+                onOpened: root.page = "notifications"
+              }
+            }
+
+            MediaCard {
+              width: parent.width
+            }
+
+            RowLayout {
+              width: parent.width
+              Action {
+                Layout.fillWidth: true
+                icon: "apps"
+                text: "Apps"
+                onClicked: root.launch(() => Launcher.show("apps"))
+              }
+              Action {
+                Layout.fillWidth: true
+                icon: "content_paste"
+                text: "Clipboard"
+                onClicked: root.launch(() => Launcher.show("clipboard"))
+              }
+              Action {
+                Layout.fillWidth: true
+                icon: "screenshot_monitor"
+                text: "Screen"
+                onClicked: root.launch(() => Quickshell.execDetached(["myscrot.sh"]))
+              }
+              Action {
+                Layout.fillWidth: true
+                icon: "screenshot_region"
+                text: "Region"
+                onClicked: root.launch(() => Quickshell.execDetached(["myscrot.sh", "1"]))
+              }
+              Action {
+                Layout.fillWidth: true
+                icon: Recorder.active ? "stop_circle" : "videocam"
+                iconColor: Recorder.active ? Theme.red : Theme.fg
+                text: Recorder.active ? "Stop" : "Record"
+                onClicked: root.launch(() => Recorder.toggle(false))
+              }
+              Action {
+                Layout.fillWidth: true
+                visible: !Recorder.active
+                icon: "crop_free"
+                text: "Rec area"
+                onClicked: root.launch(() => Recorder.toggle(true))
+              }
+            }
+
             Rectangle {
-              visible: Audio.ok || root.brightOk
+              visible: Audio.ok || Brightness.ok
               width: parent.width
               implicitHeight: sliders.implicitHeight + 16
               radius: 16
@@ -212,7 +294,7 @@ Singleton {
                 }
 
                 RowLayout {
-                  visible: root.brightOk
+                  visible: Brightness.ok
                   width: parent.width
                   spacing: 8
                   IconButton {
@@ -220,16 +302,14 @@ Singleton {
                     interactive: false
                   }
                   Slider {
-                    id: brightSlider
                     Layout.fillWidth: true
-                    value: root.brightDrag >= 0 ? root.brightDrag : root.bright
-                    onMoved: v => root.brightDrag = v
-                    onReleased: v => root.setBright(v)
+                    value: Brightness.value
+                    onMoved: v => Brightness.set(v)
                   }
                   Label {
                     Layout.preferredWidth: 36
                     horizontalAlignment: Text.AlignRight
-                    text: Math.round(brightSlider.value * 100) + "%"
+                    text: Math.round(Brightness.value * 100) + "%"
                     color: Theme.dim
                   }
                 }
@@ -282,6 +362,48 @@ Singleton {
             visible: root.page === "bluetooth"
             width: parent.width
             onBack: root.page = "main"
+          }
+
+          Column {
+            id: notifPage
+            visible: root.page === "notifications"
+            width: parent.width
+            spacing: 8
+
+            PageHeader {
+              title: "Notifications"
+              onBack: root.page = "main"
+              PillButton {
+                visible: Notifs.history.length > 0
+                text: "Clear"
+                onClicked: Notifs.clear()
+              }
+            }
+            EmptyState {
+              visible: Notifs.history.length === 0
+              icon: "notifications_none"
+              text: "Nothing new"
+            }
+            Flickable {
+              width: parent.width
+              height: Math.min(contentHeight, 480)
+              contentHeight: notifList.implicitHeight
+              clip: true
+              boundsBehavior: Flickable.StopAtBounds
+              Column {
+                id: notifList
+                width: parent.width
+                spacing: 8
+                Repeater {
+                  model: Notifs.history
+                  NotifCard {
+                    required property var modelData
+                    notif: modelData
+                    width: notifList.width
+                  }
+                }
+              }
+            }
           }
         }
       }

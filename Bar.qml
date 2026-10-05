@@ -175,6 +175,37 @@ Scope {
         }
 
         Pill {
+          visible: Recorder.active
+          onClicked: Recorder.toggle()
+          Icon {
+            name: "radio_button_checked"
+            size: 16
+            color: Theme.red
+          }
+          Label {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Math.floor(Recorder.elapsed / 60) + ":" + String(Recorder.elapsed % 60).padStart(2, "0")
+            color: Theme.red
+          }
+        }
+
+        Pill {
+          visible: Media.player !== null
+          onClicked: Media.player.togglePlaying()
+          Icon {
+            name: Media.player && Media.player.isPlaying ? "pause" : "music_note"
+            size: 16
+            color: Theme.aqua
+          }
+          Label {
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(implicitWidth, 220)
+            text: Media.artist ? Media.title + " · " + Media.artist : Media.title
+            elide: Text.ElideRight
+          }
+        }
+
+        Pill {
           active: SysInfo.open
           onClicked: SysInfo.toggle()
           Row {
@@ -239,9 +270,15 @@ Scope {
               var steps = Math.trunc(acc / 120);
               if (steps !== 0) {
                 acc -= steps * 120;
-                Audio.setVolume(Audio.volume + steps * 0.05);
+                Audio.step(steps * 0.05);
               }
             }
+          }
+          Icon {
+            visible: Notifs.dnd || Notifs.history.length > 0
+            name: Notifs.dnd ? "notifications_off" : "notifications_unread"
+            size: 16
+            color: Notifs.dnd ? Theme.dim : Theme.accent
           }
           Icon {
             visible: ControlCenter.wifiDevice !== null
