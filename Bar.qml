@@ -174,9 +174,53 @@ Scope {
           color: Theme.dim
         }
 
-        Label {
-          text: "MEM " + SysStats.mem + "  LOAD " + SysStats.load
-          color: Theme.blue
+        Row {
+          spacing: 2
+          Icon {
+            name: "memory"
+            size: 14
+            color: Theme.blue
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Label {
+            text: SysStats.mem
+            color: Theme.blue
+            rightPadding: 6
+          }
+          Icon {
+            name: "speed"
+            size: 14
+            color: Theme.blue
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Label {
+            text: SysStats.load
+            color: Theme.blue
+          }
+        }
+
+        Row {
+          spacing: 2
+          Icon {
+            name: "arrow_downward"
+            size: 14
+            color: Theme.green
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Label {
+            text: SysStats.down
+            color: Theme.green
+          }
+          Icon {
+            name: "arrow_upward"
+            size: 14
+            color: Theme.yellow
+            anchors.verticalCenter: parent.verticalCenter
+          }
+          Label {
+            text: SysStats.up
+            color: Theme.yellow
+          }
         }
 
         Pill {
