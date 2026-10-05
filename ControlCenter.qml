@@ -20,6 +20,7 @@ Singleton {
 
   function show(s) {
     Calendar.hide();
+    SysInfo.hide();
     side = s || "right";
     page = "main";
     open = true;

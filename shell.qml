@@ -36,6 +36,19 @@ ShellRoot {
     property: "barWindows"
     value: bar.windows
   }
+  Binding {
+    target: SysInfo
+    property: "barWindows"
+    value: bar.windows
+  }
+
+  IpcHandler {
+    target: "sysinfo"
+
+    function toggle(): void {
+      SysInfo.toggle();
+    }
+  }
 
   IpcHandler {
     target: "calendar"

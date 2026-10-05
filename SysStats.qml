@@ -11,26 +11,36 @@ Singleton {
   property string down: ".."
   property string up: ".."
   property var lastNet: null
+  // bytes, for the sysinfo popup
+  property real memUsed: 0
+  property real memTotal: 0
+  property real swapUsed: 0
+  property real swapTotal: 0
 
-  // fixed width so the bar doesn't jitter
-  function fmtRate(bps) {
-    var units = ["B", "K", "M", "G"];
+  function fmtSize(b) {
+    var units = ["B", "K", "M", "G", "T"];
     var i = 0;
-    while (bps >= 1000 && i < units.length - 1) {
-      bps /= 1024;
+    while (b >= 1000 && i < units.length - 1) {
+      b /= 1024;
       i++;
     }
-    var n = bps < 10 && i > 0 ? bps.toFixed(1) : Math.round(bps).toString();
-    return (n + units[i]).padStart(5);
+    return (b < 10 && i > 0 ? b.toFixed(1) : Math.round(b).toString()) + units[i];
+  }
+  // fixed width so the bar doesn't jitter
+  function fmtRate(bps) {
+    return fmtSize(bps).padStart(5);
   }
 
   FileView {
     id: meminfo
     path: "/proc/meminfo"
     onLoaded: {
-      var total = Number(/MemTotal:\s+(\d+)/.exec(text())[1]);
-      var avail = Number(/MemAvailable:\s+(\d+)/.exec(text())[1]);
-      root.mem = Math.round((total - avail) / total * 100) + "%";
+      var kb = k => Number(new RegExp(k + ":\\s+(\\d+)").exec(text())[1]) * 1024;
+      root.memTotal = kb("MemTotal");
+      root.memUsed = root.memTotal - kb("MemAvailable");
+      root.swapTotal = kb("SwapTotal");
+      root.swapUsed = root.swapTotal - kb("SwapFree");
+      root.mem = Math.round(root.memUsed / root.memTotal * 100) + "%";
     }
   }
 

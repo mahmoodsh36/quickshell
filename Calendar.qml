@@ -35,6 +35,7 @@ Singleton {
 
   function show() {
     ControlCenter.hide();
+    SysInfo.hide();
     today = new Date();
     cache = {};
     goTo(today);
