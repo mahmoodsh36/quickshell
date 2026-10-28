@@ -1,0 +1,1 @@
+my quickshell config
