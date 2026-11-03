@@ -18,7 +18,7 @@ Text {
     running: icon.spinning
     from: 0
     to: 360
-    duration: 1000
+    duration: 1600
     loops: Animation.Infinite
   }
   onSpinningChanged: {

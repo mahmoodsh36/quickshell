@@ -27,13 +27,13 @@ Singleton {
   property bool loading: false
   property string error: ""
   property string pending: ""
+  // when cache was last emptied, edits after it make it stale
+  property real since: Date.now()
 
   function show() {
-    today = new Date();
-    cache = {};
-    goTo(today);
     Popups.open("calendar");
-    fetch(true);
+    goTo(new Date());
+    refresh();
   }
   function hide() {
     Popups.close("calendar");
@@ -70,20 +70,41 @@ Singleton {
     goTo(new Date(d.getFullYear(), d.getMonth(), Math.min(selected.getDate(), last)));
   }
 
+  // reparsing every note is slow, so cached months are kept until an org file changes
+  function refresh() {
+    today = new Date();
+    changes.exec(["find", Config.notesDir + "/", "-maxdepth", "1", "-name", "*.org", "-newermt", "@" + since / 1000, "-print", "-quit"]);
+  }
+  function invalidate() {
+    cache = {};
+    since = Date.now();
+  }
+
   // force skips the cache
   function fetch(force) {
     const k = key(gridStart);
     if (!open && !force)
       return;
     entries = cache[k] || {};
-    if (cache[k] && !force)
+    if (!force && (cache[k] || loading && pending === k))
       return;
     pending = k;
     loading = true;
     error = "";
-    const rule = '(:path ("' + Config.notesDir + '/") :glob "*.org" :format "org-mode")';
-    proc.exec(["cltpt", "agenda", "-r", rule, "--from", k, "--to", key(addDays(gridStart, 42)), "--style", "json", "--include-done"]);
     watchdog.restart();
+    run();
+  }
+  // a superseded run is killed and its exit starts the next, since exec on a running process mixes their output
+  function run() {
+    if (proc.running) {
+      proc.stale = true;
+      proc.signal(15);
+      return;
+    }
+    proc.stale = false;
+    proc.started = false;
+    const rule = '(:path ("' + Config.notesDir + '/") :glob "*.org" :format "org-mode")';
+    proc.exec(["cltpt", "agenda", "-r", rule, "--from", pending, "--to", key(addDays(gridStart, 42)), "--style", "json", "--include-done"]);
   }
 
   function ingest(text) {
@@ -121,34 +142,46 @@ Singleton {
     }
   }
 
-  // refetch and roll today over while open
+  // pick up edits and roll today over while open
   Timer {
     interval: 5 * 60 * 1000
     running: root.open
     repeat: true
-    onTriggered: {
-      root.today = new Date();
-      root.cache = {};
-      root.fetch(true);
+    onTriggered: root.refresh()
+  }
+
+  Process {
+    id: changes
+    stdout: StdioCollector {
+      onStreamFinished: {
+        if (text !== "")
+          root.invalidate();
+        root.fetch(text !== "");
+      }
     }
   }
 
   Process {
     id: proc
-    property string forKey: ""
-    onStarted: forKey = root.pending
-    // failed starts only emit runningChanged. deferred past a superseded run's exit
+    property bool stale: false
+    property bool started: false
+    onStarted: started = true
+    // failed starts only emit runningChanged. deferred past the exit's output
     onRunningChanged: Qt.callLater(() => {
-      if (!proc.running && proc.forKey !== root.pending && root.loading)
+      if (proc.running || !root.loading)
+        return;
+      if (proc.stale)
+        root.run();
+      else if (!proc.started)
         root.finish("cltpt not found");
     })
     stdout: StdioCollector {
       onStreamFinished: {
-        if (proc.forKey !== root.pending)
+        if (proc.stale)
           return;
         try {
           const parsed = root.ingest(text);
-          root.cache[proc.forKey] = parsed;
+          root.cache[root.pending] = parsed;
           root.entries = parsed;
           root.finish("");
         } catch (e) {
@@ -157,17 +190,17 @@ Singleton {
       }
     }
     onExited: code => {
-      if (code !== 0 && proc.forKey === root.pending)
+      if (code !== 0 && !proc.stale)
         root.finish("cltpt exited with code " + code);
     }
   }
   Timer {
     id: watchdog
-    interval: 20000
+    // a cold parse over a network share can take 20s
+    interval: 60000
     onTriggered: {
-      // clearing pending makes the killed run's exit and output no-ops
-      root.pending = "";
       root.finish("cltpt didn't respond");
+      proc.stale = true;
       proc.signal(9);
     }
   }
