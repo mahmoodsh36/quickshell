@@ -14,7 +14,6 @@ Singleton {
   property string mode: "apps"
   property string query: ""
   property int selected: 0
-  readonly property string terminal: "wezterm"
   // cliphist list lines, "id\tpreview"
   property var clips: []
 
@@ -38,18 +37,18 @@ Singleton {
   }
 
   function score(entry, q) {
-    var name = (entry.name || "").toLowerCase();
+    const name = (entry.name || "").toLowerCase();
     if (name.startsWith(q))
       return 0;
     if (name.includes(q))
       return 1;
-    var hay = [entry.genericName, entry.comment].concat(Array.from(entry.keywords || [])).join(" ").toLowerCase();
+    const hay = [entry.genericName, entry.comment].concat(Array.from(entry.keywords || [])).join(" ").toLowerCase();
     return hay.includes(q) ? 2 : -1;
   }
 
   // applications already excludes Hidden/NoDisplay entries
   property var filtered: {
-    var q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
     return Array.from(DesktopEntries.applications.values)
       .map(e => ({ s: score(e, q), name: (e.name || "").toLowerCase(), e: e }))
       .filter(x => x.s >= 0)
@@ -59,7 +58,7 @@ Singleton {
   }
 
   property var clipMatches: {
-    var q = query.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
     return clips.filter(c => c.toLowerCase().includes(q)).slice(0, 9);
   }
 
@@ -73,7 +72,7 @@ Singleton {
     if (mode === "clipboard") {
       Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | cliphist decode | wl-copy", "sh", entry]);
     } else if (entry.runInTerminal) {
-      var ctx = { command: [terminal, "start", "--"].concat(Array.from(entry.command)) };
+      const ctx = { command: Config.terminalExec.concat(Array.from(entry.command)) };
       if (entry.workingDirectory)
         ctx.workingDirectory = entry.workingDirectory;
       Quickshell.execDetached(ctx);
@@ -151,7 +150,7 @@ Singleton {
             }
             onAccepted: root.launch(root.current)
             Keys.onPressed: event => {
-              var ctrl = event.modifiers & Qt.ControlModifier;
+              const ctrl = event.modifiers & Qt.ControlModifier;
               if (event.key === Qt.Key_Escape)
                 root.hide();
               else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || (ctrl && event.key === Qt.Key_N))
@@ -203,18 +202,16 @@ Singleton {
                   width: parent.width
                   elide: Text.ElideRight
                   text: row.isClip ? row.modelData.split("\t").slice(1).join(" ") : row.modelData.name
-                  color: row.isCurrent ? Theme.yellow : Theme.fg
+                  color: row.isCurrent ? Theme.accent : Theme.fg
                   Behavior on color {
                     ColorAnimation {
                       duration: 120
                     }
                   }
                 }
-                Label {
+                Caption {
                   visible: text !== ""
                   text: row.isClip ? "" : row.modelData.genericName || ""
-                  color: Theme.dim
-                  font.pixelSize: Theme.fontSizeSmall
                 }
               }
             }

@@ -1,19 +1,16 @@
 pragma Singleton
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
 
 // system details popup, opened from the bar's stats pill. polls only while open.
 Singleton {
   id: root
-  property bool open: false
-  property var barWindows: []
+  readonly property bool open: popup.open
 
   property string host: ""
   property string kernel: ""
   property real uptime: 0
-  property var loads: []
   property int cpu: -1
   property var lastCpu: null
   property real temp: -1
@@ -21,14 +18,12 @@ Singleton {
   property var procs: []
 
   function show() {
-    ControlCenter.hide();
-    Calendar.hide();
     lastCpu = null;
-    open = true;
+    Popups.open("sysinfo");
     refresh();
   }
   function hide() {
-    open = false;
+    Popups.close("sysinfo");
   }
   function toggle() {
     if (open)
@@ -40,17 +35,16 @@ Singleton {
   function refresh() {
     stat.reload();
     uptimeFile.reload();
-    loadavg.reload();
     if (!probe.running)
       probe.running = true;
   }
 
   function fmtUptime(s) {
-    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+    const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
     return d > 0 ? d + "d " + h + "h" : h > 0 ? h + "h " + m + "m" : m + "m";
   }
   function levelColor(frac) {
-    return frac >= 0.9 ? Theme.red : frac >= 0.75 ? Theme.orange : Theme.accent;
+    return frac >= 0.9 ? Theme.error : frac >= 0.75 ? Theme.warning : Theme.accent;
   }
 
   FileView {
@@ -67,18 +61,13 @@ Singleton {
     onLoaded: root.uptime = Number(text().split(" ")[0])
   }
   FileView {
-    id: loadavg
-    path: "/proc/loadavg"
-    onLoaded: root.loads = text().split(" ").slice(0, 3)
-  }
-  FileView {
     id: stat
     path: "/proc/stat"
     onLoaded: {
-      var f = text().split("\n")[0].trim().split(/\s+/).slice(1, 9).map(Number);
-      var total = f.reduce((a, b) => a + b, 0);
+      const f = text().split("\n")[0].trim().split(/\s+/).slice(1, 9).map(Number);
+      const total = f.reduce((a, b) => a + b, 0);
       // idle + iowait
-      var idle = f[3] + f[4];
+      const idle = f[3] + f[4];
       if (root.lastCpu && total > root.lastCpu.total)
         root.cpu = Math.round(100 * (1 - (idle - root.lastCpu.idle) / (total - root.lastCpu.total)));
       root.lastCpu = {
@@ -101,7 +90,7 @@ Singleton {
         for t in $h/temp*_input; do [ -r "$t" ] && echo "$n $(cat $t)"; done
       done
       echo @df
-      df -P -T -B1 -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs -x ramfs | tail -n +2
+      timeout 3 df -P -T -B1 -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs -x ramfs | tail -n +2
       echo @top
       top -b -n 2 -d 1 -o %CPU -w 512 | awk '/^ *PID/ { n++; next } n == 2 && NF' | head -n 6
     `]
@@ -111,9 +100,9 @@ Singleton {
   }
 
   function ingest(out) {
-    var sec = {};
-    var cur = null;
-    for (var line of out.split("\n")) {
+    const sec = {};
+    let cur = null;
+    for (const line of out.split("\n")) {
       if (line.startsWith("@"))
         sec[cur = line.slice(1)] = [];
       else if (cur && line.trim() !== "")
@@ -121,9 +110,9 @@ Singleton {
     }
 
     // prefer the cpu package sensor, else the hottest
-    var best = -1, hottest = -1;
-    for (var l of sec.temp || []) {
-      var [name, v] = l.split(" ");
+    let best = -1, hottest = -1;
+    for (const l of sec.temp || []) {
+      let [name, v] = l.split(" ");
       v = Number(v) / 1000;
       hottest = Math.max(hottest, v);
       if (best < 0 && /^(coretemp|k10temp|zenpower|cpu_thermal)$/.test(name))
@@ -132,10 +121,10 @@ Singleton {
     temp = best >= 0 ? best : hottest;
 
     // bind mounts and subvolumes show the same device again
-    var seen = {};
-    var ds = [];
-    for (var l of sec.df || []) {
-      var f = l.split(/\s+/);
+    const seen = {};
+    const ds = [];
+    for (const l of sec.df || []) {
+      const f = l.split(/\s+/);
       if (f.length < 7 || seen[f[0]] || f[6].startsWith("/nix/store"))
         continue;
       seen[f[0]] = true;
@@ -163,7 +152,6 @@ Singleton {
     onTriggered: root.refresh()
   }
 
-  // label, right-aligned value, meter
   component Stat: Column {
     id: st
     property string icon
@@ -190,12 +178,10 @@ Singleton {
           elide: Text.ElideMiddle
         }
       }
-      Label {
+      Caption {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         text: st.detail
-        color: Theme.dim
-        font.pixelSize: Theme.fontSizeSmall
       }
     }
     Meter {
@@ -206,157 +192,98 @@ Singleton {
     }
   }
 
-  component Section: Label {
-    leftPadding: 4
-    color: Theme.dim
-    font.pixelSize: Theme.fontSizeSmall
-    font.bold: true
-  }
+  Popup {
+    id: popup
+    name: "sysinfo"
 
-  component Divider: Rectangle {
-    width: parent.width
-    height: 1
-    color: Theme.bg2
-  }
+    Column {
+      width: parent.width
+      spacing: 12
 
-  Variants {
-    model: Quickshell.screens
-    PanelWindow {
-      id: panel
-      required property var modelData
-      screen: modelData
-      visible: root.open && (Hyprland.focusedMonitor ? modelData.name === Hyprland.focusedMonitor.name : true)
-      focusable: true
-      anchors {
-        top: true
-        right: true
-      }
-      margins {
-        top: Theme.barHeight + 6
-        right: 8
-      }
-      exclusionMode: ExclusionMode.Ignore
-      implicitWidth: 360
-      implicitHeight: content.implicitHeight + 32
-      color: "transparent"
-
-      onVisibleChanged: {
-        if (visible)
-          frame.forceActiveFocus();
+      Column {
+        leftPadding: 4
+        Label {
+          text: root.host
+          font.pixelSize: Theme.fontSize + 5
+          font.bold: true
+        }
+        Caption {
+          text: "linux " + root.kernel + " · up " + root.fmtUptime(root.uptime)
+        }
       }
 
-      HyprlandFocusGrab {
-        active: panel.visible
-        windows: [panel].concat(Array.from(root.barWindows))
-        onCleared: root.hide()
+      Divider {}
+
+      Stat {
+        icon: "developer_board"
+        title: "CPU " + (root.cpu >= 0 ? root.cpu + "%" : "..")
+        detail: (root.temp >= 0 ? Math.round(root.temp) + "°C  " : "") + "load " + SysStats.loads.join(" ")
+        value: root.cpu >= 0 ? root.cpu / 100 : 0
+      }
+      Stat {
+        icon: "memory"
+        title: "Memory"
+        detail: SysStats.fmtSize(SysStats.memUsed) + " / " + SysStats.fmtSize(SysStats.memTotal)
+        value: SysStats.memTotal > 0 ? SysStats.memUsed / SysStats.memTotal : 0
+      }
+      Stat {
+        visible: SysStats.swapTotal > 0
+        icon: "swap_horiz"
+        title: "Swap"
+        detail: SysStats.fmtSize(SysStats.swapUsed) + " / " + SysStats.fmtSize(SysStats.swapTotal)
+        value: SysStats.swapUsed / Math.max(1, SysStats.swapTotal)
+      }
+      Stat {
+        icon: "swap_vert"
+        title: "↓" + SysStats.down.trim() + "/s  ↑" + SysStats.up.trim() + "/s"
+        detail: SysStats.lastNet ? "since boot ↓" + SysStats.fmtSize(SysStats.lastNet.rx) + " ↑" + SysStats.fmtSize(SysStats.lastNet.tx) : ""
       }
 
-      Rectangle {
-        id: frame
-        anchors.fill: parent
-        color: Theme.bg
-        border.width: 1
-        border.color: Theme.bg2
-        radius: 20
-        focus: true
-        Keys.onEscapePressed: root.hide()
+      Divider {}
+      Section {
+        text: "DISKS"
+      }
 
-        Column {
-          id: content
-          anchors.fill: parent
-          anchors.margins: 16
-          spacing: 12
+      Repeater {
+        model: root.disks
+        Stat {
+          required property var modelData
+          icon: "hard_drive"
+          title: modelData.mount
+          detail: SysStats.fmtSize(modelData.used) + " / " + SysStats.fmtSize(modelData.size) + "  " + modelData.type
+          value: modelData.used / Math.max(1, modelData.size)
+        }
+      }
 
-          Column {
-            leftPadding: 4
-            Label {
-              text: root.host
-              font.pixelSize: Theme.fontSize + 5
-              font.bold: true
-            }
-            Label {
-              text: "linux " + root.kernel + " · up " + root.fmtUptime(root.uptime)
-              color: Theme.dim
-              font.pixelSize: Theme.fontSizeSmall
-            }
-          }
+      Divider {
+        visible: root.procs.length > 0
+      }
+      Section {
+        visible: root.procs.length > 0
+        text: "TOP PROCESSES"
+      }
 
-          Divider {}
-
-          Stat {
-            icon: "developer_board"
-            title: "CPU " + (root.cpu >= 0 ? root.cpu + "%" : "..")
-            detail: (root.temp >= 0 ? Math.round(root.temp) + "°C  " : "") + "load " + root.loads.join(" ")
-            value: root.cpu >= 0 ? root.cpu / 100 : 0
-          }
-          Stat {
-            icon: "memory"
-            title: "Memory"
-            detail: SysStats.fmtSize(SysStats.memUsed) + " / " + SysStats.fmtSize(SysStats.memTotal)
-            value: SysStats.memTotal > 0 ? SysStats.memUsed / SysStats.memTotal : 0
-          }
-          Stat {
-            visible: SysStats.swapTotal > 0
-            icon: "swap_horiz"
-            title: "Swap"
-            detail: SysStats.fmtSize(SysStats.swapUsed) + " / " + SysStats.fmtSize(SysStats.swapTotal)
-            value: SysStats.swapUsed / Math.max(1, SysStats.swapTotal)
-          }
-          Stat {
-            icon: "swap_vert"
-            title: "↓" + SysStats.down.trim() + "/s  ↑" + SysStats.up.trim() + "/s"
-            detail: SysStats.lastNet ? "since boot ↓" + SysStats.fmtSize(SysStats.lastNet.rx) + " ↑" + SysStats.fmtSize(SysStats.lastNet.tx) : ""
-          }
-
-          Divider {}
-          Section {
-            text: "DISKS"
-          }
-
-          Repeater {
-            model: root.disks
-            Stat {
-              required property var modelData
-              icon: "hard_drive"
-              title: modelData.mount
-              detail: SysStats.fmtSize(modelData.used) + " / " + SysStats.fmtSize(modelData.size) + "  " + modelData.type
-              value: modelData.used / Math.max(1, modelData.size)
-            }
-          }
-
-          Divider {
-            visible: root.procs.length > 0
-          }
-          Section {
-            visible: root.procs.length > 0
-            text: "TOP PROCESSES"
-          }
-
-          Column {
+      Column {
+        width: parent.width
+        spacing: 4
+        Repeater {
+          model: root.procs
+          Item {
+            required property var modelData
             width: parent.width
-            spacing: 4
-            Repeater {
-              model: root.procs
-              Item {
-                required property var modelData
-                width: parent.width
-                height: 18
-                Label {
-                  anchors.left: parent.left
-                  anchors.leftMargin: 4
-                  anchors.right: nums.left
-                  anchors.rightMargin: 8
-                  text: modelData.name
-                  elide: Text.ElideRight
-                }
-                Label {
-                  id: nums
-                  anchors.right: parent.right
-                  text: (modelData.cpu.toFixed(1) + "%").padStart(6) + (modelData.mem.toFixed(1) + "%").padStart(7)
-                  color: Theme.dim
-                  font.pixelSize: Theme.fontSizeSmall
-                }
-              }
+            height: 18
+            Label {
+              anchors.left: parent.left
+              anchors.leftMargin: 4
+              anchors.right: nums.left
+              anchors.rightMargin: 8
+              text: modelData.name
+              elide: Text.ElideRight
+            }
+            Caption {
+              id: nums
+              anchors.right: parent.right
+              text: (modelData.cpu.toFixed(1) + "%").padStart(6) + (modelData.mem.toFixed(1) + "%").padStart(7)
             }
           }
         }

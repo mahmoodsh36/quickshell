@@ -1,6 +1,5 @@
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Networking
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import Quickshell.Widgets
@@ -29,15 +28,6 @@ Scope {
     if (charging)
       return "battery_charging_full";
     return batPct >= 95 ? "battery_full" : "battery_" + Math.round(batPct / 100 * 6) + "_bar";
-  }
-  function wifiIcon() {
-    var net = ControlCenter.wifiNetwork;
-    if (!Networking.wifiEnabled)
-      return "wifi_off";
-    if (!net)
-      return "signal_wifi_0_bar";
-    var s = net.signalStrength;
-    return s > 0.75 ? "signal_wifi_4_bar" : s > 0.5 ? "network_wifi_3_bar" : s > 0.25 ? "network_wifi_2_bar" : "network_wifi_1_bar";
   }
 
   component Pill: Rectangle {
@@ -121,7 +111,7 @@ Scope {
             width: target ? target.width : 26
             height: 24
             radius: Theme.radius
-            color: Theme.yellow
+            color: Theme.accent
             Behavior on x {
               NumberAnimation {
                 duration: 200
@@ -146,7 +136,7 @@ Scope {
                 Label {
                   anchors.centerIn: parent
                   text: ws.wsId
-                  color: ws.isActive ? Theme.bg : (wsMouse.containsMouse ? Theme.yellow : (ws.isBusy ? Theme.fg : Theme.dim))
+                  color: ws.isActive ? Theme.accentFg : (wsMouse.containsMouse ? Theme.accent : (ws.isBusy ? Theme.fg : Theme.dim))
                   font.bold: ws.isActive
                   Behavior on color {
                     ColorAnimation {
@@ -180,12 +170,12 @@ Scope {
           Icon {
             name: "radio_button_checked"
             size: 16
-            color: Theme.red
+            color: Theme.error
           }
           Label {
             anchors.verticalCenter: parent.verticalCenter
             text: Math.floor(Recorder.elapsed / 60) + ":" + String(Recorder.elapsed % 60).padStart(2, "0")
-            color: Theme.red
+            color: Theme.error
           }
         }
 
@@ -195,7 +185,7 @@ Scope {
           Icon {
             name: Media.player && Media.player.isPlaying ? "pause" : "music_note"
             size: 16
-            color: Theme.aqua
+            color: Theme.secondary
           }
           Label {
             anchors.verticalCenter: parent.verticalCenter
@@ -214,23 +204,23 @@ Scope {
             Icon {
               name: "memory"
               size: 14
-              color: Theme.blue
+              color: Theme.info
               anchors.verticalCenter: parent.verticalCenter
             }
             Label {
               text: SysStats.mem
-              color: Theme.blue
+              color: Theme.info
               rightPadding: 6
             }
             Icon {
               name: "speed"
               size: 14
-              color: Theme.blue
+              color: Theme.info
               anchors.verticalCenter: parent.verticalCenter
             }
             Label {
               text: SysStats.load
-              color: Theme.blue
+              color: Theme.info
             }
           }
           Row {
@@ -239,22 +229,22 @@ Scope {
             Icon {
               name: "arrow_downward"
               size: 14
-              color: Theme.green
+              color: Theme.success
               anchors.verticalCenter: parent.verticalCenter
             }
             Label {
               text: SysStats.down
-              color: Theme.green
+              color: Theme.success
             }
             Icon {
               name: "arrow_upward"
               size: 14
-              color: Theme.yellow
+              color: Theme.accent
               anchors.verticalCenter: parent.verticalCenter
             }
             Label {
               text: SysStats.up
-              color: Theme.yellow
+              color: Theme.accent
             }
           }
         }
@@ -262,27 +252,18 @@ Scope {
         Pill {
           active: ControlCenter.open && ControlCenter.side === "right"
           onClicked: ControlCenter.toggle("right")
-          WheelHandler {
-            // one step per 120, touchpads send small deltas
-            property real acc: 0
-            onWheel: event => {
-              acc += event.angleDelta.y;
-              var steps = Math.trunc(acc / 120);
-              if (steps !== 0) {
-                acc -= steps * 120;
-                Audio.step(steps * 0.05);
-              }
-            }
+          WheelSteps {
+            onStepped: steps => Audio.step(steps * 0.05)
           }
           Icon {
-            visible: Notifs.dnd || Notifs.history.length > 0
-            name: Notifs.dnd ? "notifications_off" : "notifications_unread"
+            visible: Persist.dnd || Notifs.history.length > 0
+            name: Persist.dnd ? "notifications_off" : "notifications_unread"
             size: 16
-            color: Notifs.dnd ? Theme.dim : Theme.accent
+            color: Persist.dnd ? Theme.dim : Theme.accent
           }
           Icon {
-            visible: ControlCenter.wifiDevice !== null
-            name: root.wifiIcon()
+            visible: Wifi.device !== null
+            name: Wifi.icon
             size: 16
           }
           Icon {
@@ -292,9 +273,9 @@ Scope {
           }
           Icon {
             visible: Audio.ok
-            name: Audio.muted ? "volume_off" : Audio.volume < 0.5 ? "volume_down" : "volume_up"
+            name: Audio.icon
             size: 16
-            color: Audio.muted ? Theme.red : Theme.fg
+            color: Audio.muted ? Theme.error : Theme.fg
           }
           Label {
             visible: Audio.ok && !Audio.muted
@@ -306,13 +287,13 @@ Scope {
             name: root.batIcon()
             size: 16
             rotation: 90
-            color: root.batPct < 20 && !root.charging ? Theme.red : Theme.fg
+            color: root.batPct < 20 && !root.charging ? Theme.error : Theme.fg
           }
           Label {
             visible: root.hasBat
             anchors.verticalCenter: parent.verticalCenter
             text: root.batPct + "%"
-            color: root.batPct < 20 && !root.charging ? Theme.red : Theme.fg
+            color: root.batPct < 20 && !root.charging ? Theme.error : Theme.fg
           }
         }
 
@@ -342,11 +323,11 @@ Scope {
               cursorShape: Qt.PointingHandCursor
               acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
               onClicked: mouse => {
-                var item = trayIcon.modelData;
+                const item = trayIcon.modelData;
                 if (mouse.button === Qt.MiddleButton) {
                   item.secondaryActivate();
                 } else if (item.hasMenu && (mouse.button === Qt.RightButton || item.onlyMenu)) {
-                  var p = trayIcon.mapToItem(null, 0, trayIcon.height);
+                  const p = trayIcon.mapToItem(null, 0, trayIcon.height);
                   item.display(bar, p.x, p.y);
                 } else {
                   item.activate();

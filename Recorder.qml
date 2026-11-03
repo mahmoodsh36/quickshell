@@ -17,7 +17,7 @@ Singleton {
       proc.signal(2);
       return;
     }
-    file = Quickshell.env("HOME") + "/data/videos/recs/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_hh-mm-ss") + ".mp4";
+    file = Config.recordingsDir + "/" + Qt.formatDateTime(new Date(), "yyyy-MM-dd_hh-mm-ss") + ".mp4";
     proc.exec(["sh", "-c", 'mkdir -p "$(dirname "$1")"; if [ -n "$2" ]; then g=$(slurp) || exit 1; fi; exec wf-recorder ${g:+-g "$g"} -f "$1"', "sh", file, region ? "1" : ""]);
   }
 

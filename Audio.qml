@@ -11,6 +11,7 @@ Singleton {
   readonly property bool ok: sink !== null && sink.ready && sink.audio !== null
   readonly property real volume: ok ? sink.audio.volume : 0
   readonly property bool muted: ok && sink.audio.muted
+  readonly property string icon: muted ? "volume_off" : volume < 0.01 ? "volume_mute" : volume < 0.5 ? "volume_down" : "volume_up"
 
   function setVolume(v) {
     if (ok)

@@ -21,7 +21,7 @@ Rectangle {
     radius: 8
     anchors.verticalCenter: parent.verticalCenter
     x: toggle.checked ? parent.width - width - 3 : 3
-    color: toggle.checked ? Theme.bg : Theme.dim
+    color: toggle.checked ? Theme.accentFg : Theme.dim
     Behavior on x {
       NumberAnimation {
         duration: 150

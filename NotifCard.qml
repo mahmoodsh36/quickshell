@@ -9,10 +9,10 @@ Rectangle {
   required property var notif
   readonly property bool hovered: mouse.containsMouse || closeHover.hovered
   readonly property var actions: Array.from(notif.actions)
-  readonly property var defaultAction: actions.find(a => a.identifier === "default") || null
+  readonly property var defaultAction: actions.find(a => a.identifier === "default")
   readonly property var buttons: actions.filter(a => a.identifier !== "default")
   readonly property string image: {
-    var src = notif.image || notif.appIcon;
+    const src = notif.image || notif.appIcon;
     if (src === "")
       return "";
     return src.includes("://") ? src : src.startsWith("/") ? "file://" + src : Quickshell.iconPath(src, true);
@@ -40,7 +40,7 @@ Rectangle {
     width: 4
     height: parent.height
     radius: 2
-    color: Theme.red
+    color: Theme.error
   }
 
   IconImage {
@@ -61,11 +61,9 @@ Rectangle {
     y: 12
     spacing: 2
 
-    Label {
+    Caption {
       width: parent.width
       text: card.notif.appName
-      color: Theme.dim
-      font.pixelSize: Theme.fontSizeSmall
       elide: Text.ElideRight
     }
     Label {

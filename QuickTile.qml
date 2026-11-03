@@ -12,7 +12,7 @@ Rectangle {
   signal toggled
   signal opened
 
-  readonly property color ink: active ? Theme.bg : Theme.fg
+  readonly property color ink: active ? Theme.accentFg : Theme.fg
 
   implicitHeight: 60
   radius: 16

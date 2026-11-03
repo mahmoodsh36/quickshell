@@ -1,0 +1,23 @@
+{
+  "bg": "{{ colors.surface.default.hex }}",
+  "bg1": "{{ colors.surface_container.default.hex }}",
+  "bg2": "{{ colors.surface_container_highest.default.hex }}",
+  "fg": "{{ colors.on_surface.default.hex }}",
+  "dim": "{{ colors.on_surface_variant.default.hex }}",
+  "accent": "{{ colors.primary.default.hex }}",
+  "accentFg": "{{ colors.on_primary.default.hex }}",
+  "secondary": "{{ colors.secondary.default.hex }}",
+  "tertiary": "{{ colors.tertiary.default.hex }}",
+  "error": "{{ colors.error.default.hex }}",
+<* if {{ is_dark_mode }} *>
+  "warning": "{{ hues.dark.orange.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+  "success": "{{ hues.dark.green.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+  "info": "{{ hues.dark.blue.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+<* else *>
+  "warning": "{{ hues.light.orange.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+  "success": "{{ hues.light.green.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+  "info": "{{ hues.light.blue.hex | to_color | harmonize: {{ colors.source_color.default.hex }} }}",
+<* endif *>
+  "mode": "{{ mode }}",
+  "wallpaper": "{{ image | replace: "\"", "\\\"" }}"
+}

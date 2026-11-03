@@ -3,11 +3,11 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// read from procfs
 Singleton {
   id: root
   property string mem: ".."
-  property string load: ".."
+  property var loads: []
+  readonly property string load: loads.length > 0 ? loads[0] : ".."
   property string down: ".."
   property string up: ".."
   property var lastNet: null
@@ -18,8 +18,8 @@ Singleton {
   property real swapTotal: 0
 
   function fmtSize(b) {
-    var units = ["B", "K", "M", "G", "T"];
-    var i = 0;
+    const units = ["B", "K", "M", "G", "T"];
+    let i = 0;
     while (b >= 1000 && i < units.length - 1) {
       b /= 1024;
       i++;
@@ -35,7 +35,7 @@ Singleton {
     id: meminfo
     path: "/proc/meminfo"
     onLoaded: {
-      var kb = k => Number(new RegExp(k + ":\\s+(\\d+)").exec(text())[1]) * 1024;
+      const kb = k => Number(new RegExp(k + ":\\s+(\\d+)").exec(text())[1]) * 1024;
       root.memTotal = kb("MemTotal");
       root.memUsed = root.memTotal - kb("MemAvailable");
       root.swapTotal = kb("SwapTotal");
@@ -47,25 +47,25 @@ Singleton {
   FileView {
     id: loadavg
     path: "/proc/loadavg"
-    onLoaded: root.load = text().split(" ")[0]
+    onLoaded: root.loads = text().split(" ").slice(0, 3)
   }
 
   FileView {
     id: netdev
     path: "/proc/net/dev"
     onLoaded: {
-      var rx = 0, tx = 0;
-      for (var line of text().split("\n").slice(2)) {
-        var m = /^\s*([^:]+):\s*(\d+)(?:\s+\d+){7}\s+(\d+)/.exec(line);
-        // skip loopback and virtual bridges/veths, they'd double count
-        if (!m || /^(lo|veth|docker|br-|virbr)/.test(m[1]))
+      let rx = 0, tx = 0;
+      for (const line of text().split("\n").slice(2)) {
+        const m = /^\s*([^:]+):\s*(\d+)(?:\s+\d+){7}\s+(\d+)/.exec(line);
+        // skip loopback, bridges, veths and vpn tunnels, they'd double count
+        if (!m || /^(lo|veth|docker|br-|virbr|tailscale|wg|tun)/.test(m[1]))
           continue;
         rx += Number(m[2]);
         tx += Number(m[3]);
       }
-      var now = Date.now();
+      const now = Date.now();
       if (root.lastNet) {
-        var dt = (now - root.lastNet.t) / 1000;
+        const dt = (now - root.lastNet.t) / 1000;
         root.down = root.fmtRate(Math.max(0, rx - root.lastNet.rx) / dt);
         root.up = root.fmtRate(Math.max(0, tx - root.lastNet.tx) / dt);
       }

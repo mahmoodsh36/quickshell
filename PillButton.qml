@@ -8,13 +8,13 @@ Rectangle {
   property bool filled: false
   signal clicked
 
-  readonly property color ink: filled ? Theme.bg : accent
+  readonly property color ink: filled ? Theme.accentFg : accent
 
   implicitHeight: 30
   implicitWidth: row.implicitWidth + 24
   radius: height / 2
   color: {
-    var base = filled ? accent : Theme.bg2;
+    const base = filled ? accent : Theme.bg2;
     return mouse.containsMouse ? Theme.hover(base) : base;
   }
   Behavior on color {
@@ -28,12 +28,14 @@ Rectangle {
     anchors.centerIn: parent
     spacing: 6
     Icon {
+      anchors.verticalCenter: parent.verticalCenter
       visible: btn.icon !== ""
       name: btn.icon
       size: 16
       color: btn.ink
     }
     Label {
+      anchors.verticalCenter: parent.verticalCenter
       text: btn.text
       color: btn.ink
       font.pixelSize: Theme.fontSizeSmall + 1

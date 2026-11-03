@@ -1,0 +1,22 @@
+# output paths are absolute on purpose: run with `-p <theme dir>` so they land there
+[config]
+source_color_index = 0
+caching = false
+# not custom_colors: those inherit the scheme's hue rotation (expressive turns orange purple)
+import_json_files = ["./hues.json"]
+
+[templates.colors]
+input_path = "./templates/colors.json"
+output_path = "/colors.json"
+
+[templates.gtk]
+input_path = "./templates/gtk.css"
+output_path = "/gtk.css"
+
+[templates.wezterm]
+input_path = "./templates/wezterm.lua"
+output_path = "/wezterm.lua"
+
+[templates.hyprland]
+input_path = "./templates/hyprland.lua"
+output_path = "/hyprland.lua"

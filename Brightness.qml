@@ -41,7 +41,7 @@ Singleton {
     stdout: StdioCollector {
       // -m prints device,class,current,percent,max
       onStreamFinished: {
-        var f = text.trim().split("\n")[0].split(",");
+        const f = text.trim().split("\n")[0].split(",");
         root.ok = f.length >= 5 && Number(f[4]) > 0;
         if (root.ok && root.pending < 0)
           root.value = Number(f[2]) / Number(f[4]);

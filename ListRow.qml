@@ -52,7 +52,7 @@ Rectangle {
       Icon {
         anchors.centerIn: parent
         name: row.icon
-        color: row.highlighted ? Theme.bg : Theme.fg
+        color: row.highlighted ? Theme.accentFg : Theme.fg
       }
     }
 
@@ -69,13 +69,12 @@ Rectangle {
         color: row.highlighted ? Theme.accent : Theme.fg
         font.bold: row.highlighted
       }
-      Label {
+      Caption {
         width: parent.width
         visible: text !== ""
         text: row.subtitle
         elide: Text.ElideRight
         color: row.subtitleColor
-        font.pixelSize: Theme.fontSizeSmall
       }
     }
 

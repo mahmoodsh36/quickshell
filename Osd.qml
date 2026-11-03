@@ -83,8 +83,8 @@ Singleton {
         anchors.left: parent.left
         anchors.leftMargin: 16
         anchors.verticalCenter: parent.verticalCenter
-        name: !root.isVolume ? "light_mode" : root.muted ? "volume_off" : root.value < 0.5 ? "volume_down" : "volume_up"
-        color: root.muted ? Theme.red : Theme.fg
+        name: root.isVolume ? Audio.icon : "light_mode"
+        color: root.muted ? Theme.error : Theme.fg
       }
       Meter {
         anchors.left: glyph.right

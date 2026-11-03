@@ -30,7 +30,7 @@ Column {
   readonly property var available: devices.filter(d => !d.paired && !d.bonded && d.deviceName !== "")
 
   function iconFor(d) {
-    var i = d.icon || "";
+    const i = d.icon || "";
     if (i.startsWith("audio-head"))
       return "headphones";
     if (i.startsWith("audio"))
@@ -97,15 +97,6 @@ Column {
     text: "Bluetooth is off"
   }
 
-  component Section: Label {
-    leftPadding: 8
-    topPadding: 4
-    color: Theme.dim
-    font.pixelSize: Theme.fontSizeSmall
-    font.bold: true
-    font.letterSpacing: 1
-  }
-
   component DeviceRow: ListRow {
     id: row
     required property var modelData
@@ -155,7 +146,7 @@ Column {
       }
       PillButton {
         text: "Forget"
-        accent: Theme.red
+        accent: Theme.error
         onClicked: {
           page.openAddr = "";
           row.dev.forget();
@@ -164,40 +155,37 @@ Column {
     }
   }
 
-  Flickable {
+  ScrollColumn {
     visible: page.on
-    width: parent.width
-    height: Math.min(contentHeight, 380)
-    contentHeight: list.implicitHeight
-    clip: true
-    boundsBehavior: Flickable.StopAtBounds
+    maxHeight: 380
+    spacing: 2
 
-    Column {
-      id: list
-      width: parent.width
-      spacing: 2
+    Section {
+      visible: page.paired.length > 0
+      leftPadding: 8
+      topPadding: 4
+      font.letterSpacing: 1
+      text: "PAIRED"
+    }
+    Repeater {
+      model: page.paired
+      DeviceRow {}
+    }
 
-      Section {
-        visible: page.paired.length > 0
-        text: "PAIRED"
-      }
-      Repeater {
-        model: page.paired
-        DeviceRow {}
-      }
-
-      Section {
-        text: "AVAILABLE"
-      }
-      Repeater {
-        model: page.available
-        DeviceRow {}
-      }
-      EmptyState {
-        visible: page.available.length === 0
-        icon: "bluetooth_searching"
-        text: "Looking for devices…"
-      }
+    Section {
+      leftPadding: 8
+      topPadding: 4
+      font.letterSpacing: 1
+      text: "AVAILABLE"
+    }
+    Repeater {
+      model: page.available
+      DeviceRow {}
+    }
+    EmptyState {
+      visible: page.available.length === 0
+      icon: "bluetooth_searching"
+      text: "Looking for devices…"
     }
   }
 }

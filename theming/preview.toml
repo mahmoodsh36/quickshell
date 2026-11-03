@@ -1,0 +1,8 @@
+[config]
+source_color_index = 0
+caching = false
+import_json_files = ["./hues.json"]
+
+[templates.colors]
+input_path = "./templates/colors.json"
+output_path = "/dev/stdout"

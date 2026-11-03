@@ -51,12 +51,10 @@ Rectangle {
           font.bold: true
           elide: Text.ElideRight
         }
-        Label {
+        Caption {
           width: parent.width
           visible: text !== ""
           text: Media.artist
-          color: Theme.dim
-          font.pixelSize: Theme.fontSizeSmall
           elide: Text.ElideRight
         }
       }

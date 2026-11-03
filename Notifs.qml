@@ -7,7 +7,6 @@ import QtQuick
 // notification daemon. history lives in the control center, popups top right.
 Singleton {
   id: root
-  property bool dnd: false
   readonly property var history: Array.from(server.trackedNotifications.values).reverse()
   // newest first
   property var popups: []
@@ -16,7 +15,7 @@ Singleton {
     popups = popups.filter(p => p !== n);
   }
   function clear() {
-    for (var n of history)
+    for (const n of history)
       n.dismiss();
   }
 
@@ -28,7 +27,7 @@ Singleton {
     onNotification: n => {
       n.tracked = true;
       n.closed.connect(() => root.drop(n));
-      if (!root.popups.includes(n) && (!root.dnd || n.urgency === NotificationUrgency.Critical))
+      if (!root.popups.includes(n) && (!Persist.dnd || n.urgency === NotificationUrgency.Critical))
         root.popups = [n].concat(root.popups);
     }
   }
@@ -43,10 +42,10 @@ Singleton {
       right: true
     }
     margins {
-      top: Theme.barHeight + 6
-      right: 8
+      top: Theme.popupTop
+      right: Theme.popupMargin
     }
-    implicitWidth: 360
+    implicitWidth: Theme.popupWidth
     implicitHeight: stack.implicitHeight
     color: "transparent"
 
