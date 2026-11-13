@@ -207,6 +207,45 @@ Singleton {
 
   readonly property var selectedEntries: entries[key(selected)] || []
 
+  // from the cached month holding today, so browsing other months doesn't hide it
+  readonly property var todayEntries: {
+    const d = today, first = new Date(d.getFullYear(), d.getMonth(), 1);
+    const month = viewYear === d.getFullYear() && viewMonth === d.getMonth() ? entries : cache[key(addDays(first, -((first.getDay() - firstDay + 7) % 7)))] || {};
+    return month[key(d)] || [];
+  }
+  function minutesUntil(e, now) {
+    return e.all_day || e.done ? -1 : (new Date(e.begin.slice(0, 10) + "T" + e.begin.slice(11, 16)) - now) / 60000;
+  }
+  function nextEntry(now) {
+    let best = null;
+    for (const e of todayEntries) {
+      const m = minutesUntil(e, now);
+      if (m > 0 && (!best || m < best.minutes))
+        best = { entry: e, minutes: m };
+    }
+    return best;
+  }
+
+  property var reminded: ({})
+  Timer {
+    interval: 60000
+    running: true
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: {
+      const now = new Date();
+      if (!root.sameDay(now, root.today))
+        root.today = now;
+      for (const e of root.todayEntries) {
+        const m = root.minutesUntil(e, now), id = e.begin + e.title;
+        if (m > 0 && m <= 10 && !root.reminded[id]) {
+          root.reminded[id] = true;
+          Quickshell.execDetached(["notify-send", "-a", "Agenda", "-i", "event", "In " + Math.ceil(m) + " min", e.title]);
+        }
+      }
+    }
+  }
+
   // widest time label, sizes the time column
   TextMetrics {
     id: timeWidth

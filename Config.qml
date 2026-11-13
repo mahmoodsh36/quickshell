@@ -14,6 +14,9 @@ Singleton {
   readonly property string recordingsDir: env("QS_RECORDINGS_DIR", dataDir + "/videos/recs")
   readonly property string notesDir: env("NOTES_DIR", home + "/brain/notes")
   readonly property string wallpaperDir: env("QS_WALLPAPER_DIR", dataDir + "/images/wal")
+  // "lat,lon,name" and an open-meteo temperature_unit
+  readonly property string weatherLocation: env("QS_WEATHER_LOCATION", "32.794,34.989,Haifa")
+  readonly property string weatherUnit: env("QS_WEATHER_UNIT", "celsius")
 
   // generated theme outputs other apps read; must match theming/matugen.toml
   readonly property string themeDir: env("XDG_STATE_HOME", home + "/.local/state") + "/theme"

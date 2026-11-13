@@ -102,9 +102,10 @@ Singleton {
   }
 
   readonly property int barHeight: 34
-  // bar popups and notification toasts share one slot under the bar
+  readonly property int railWidth: 52
+  // top bar popups and notification toasts share one slot under the bar
   readonly property int popupWidth: 360
-  readonly property int popupTop: barHeight + 6
+  readonly property int popupTop: Style.shown !== "top" ? popupMargin : barHeight + 6
   readonly property int popupMargin: 8
   readonly property int radius: 6
   readonly property string font: "monospace"

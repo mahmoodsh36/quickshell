@@ -6,16 +6,39 @@ import QtQuick
 // entry point, run with: qs
 ShellRoot {
   // singletons load lazily, these have to run from startup (the picker so its first open is instant)
-  readonly property var services: [Osd, Notifs, Wallpapers, WallpaperPicker]
+  readonly property var services: [Osd, Notifs, Wallpapers, WallpaperPicker, Overview, Weather]
 
-  Bar {
-    id: bar
+  // before the bars, so they stack above it
+  Catcher {}
+
+  // one bar style at a time, see Style
+  LazyLoader {
+    id: topBar
+    active: Style.shown === "top"
+    Bar {}
+  }
+  LazyLoader {
+    id: rail
+    active: Style.rail
+    Rail {
+      right: Style.railRight
+    }
+  }
+  LazyLoader {
+    id: island
+    active: Style.shown === "island"
+    Island {}
+  }
+  LazyLoader {
+    id: dock
+    active: Style.shown === "dock"
+    Dock {}
   }
 
   Binding {
     target: Popups
     property: "barWindows"
-    value: bar.windows
+    value: [topBar, rail, island, dock].map(l => l.item).filter(b => b).reduce((all, b) => all.concat(Array.from(b.windows)), [])
   }
 
   Background {}
@@ -108,6 +131,48 @@ ShellRoot {
     }
     function region(): void {
       Recorder.toggle(true);
+    }
+  }
+
+  IpcHandler {
+    target: "overview"
+
+    function toggle(): void {
+      Overview.toggle();
+    }
+  }
+
+  IpcHandler {
+    target: "weather"
+
+    function toggle(): void {
+      WeatherPanel.toggle();
+    }
+    function refresh(): void {
+      Weather.refresh();
+    }
+  }
+
+  IpcHandler {
+    target: "media"
+
+    function toggle(): void {
+      MediaPanel.toggle();
+    }
+  }
+
+  // qs ipc call style set <top|rail|rail-right|island|dock> | cycle | get
+  IpcHandler {
+    target: "style"
+
+    function set(name: string): void {
+      Style.set(name);
+    }
+    function cycle(): void {
+      Style.cycle();
+    }
+    function get(): string {
+      return Style.current;
     }
   }
 

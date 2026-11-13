@@ -10,6 +10,7 @@ Singleton {
   property alias colorMode: adapter.colorMode
   property alias scheme: adapter.scheme
   property alias dnd: adapter.dnd
+  property alias style: adapter.style
 
   FileView {
     path: Quickshell.statePath("state.json")
@@ -30,6 +31,8 @@ Singleton {
       // a matugen scheme type
       property string scheme: "scheme-tonal-spot"
       property bool dnd: false
+      // a Style.names entry
+      property string style: "top"
     }
   }
 }

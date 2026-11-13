@@ -43,7 +43,7 @@ Singleton {
   function launch(fn) {
     afterHide = fn;
     hide();
-    if (!popup.backingWindowVisible)
+    if (!popup.mapped)
       runAfterHide();
   }
   function runAfterHide() {
@@ -134,8 +134,8 @@ Singleton {
         event.accepted = true;
       }
     }
-    onBackingWindowVisibleChanged: {
-      if (!backingWindowVisible)
+    onMappedChanged: {
+      if (!mapped)
         root.runAfterHide();
     }
 
@@ -275,6 +275,12 @@ Singleton {
             root.hide();
             WallpaperPicker.show();
           }
+        }
+        PillButton {
+          visible: root.armed === ""
+          icon: Style.icons[Style.current]
+          text: Style.labels[Style.current]
+          onClicked: Style.cycle()
         }
         Label {
           visible: root.armed !== ""
