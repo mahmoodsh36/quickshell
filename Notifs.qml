@@ -33,12 +33,11 @@ Singleton {
     }
   }
 
-  PanelWindow {
+  OverlayWindow {
     id: win
     screen: Focus.screen
-    visible: root.popups.length > 0
-    WlrLayershell.layer: WlrLayer.Overlay
-    exclusionMode: ExclusionMode.Ignore
+    active: root.popups.length > 0
+    activeFocus: WlrKeyboardFocus.None
     // beside a left rail, else top right
     readonly property bool leftSide: Style.rail && !Style.railRight
     anchors {
@@ -52,8 +51,8 @@ Singleton {
       right: Theme.popupMargin + (Style.railRight ? Theme.railWidth : 0)
     }
     implicitWidth: Theme.popupWidth
-    implicitHeight: stack.implicitHeight
-    color: "transparent"
+    // never 0 while parked: an unanchored zero size is a layer shell protocol error
+    implicitHeight: Math.max(1, stack.implicitHeight)
 
     Column {
       id: stack

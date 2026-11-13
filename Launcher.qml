@@ -100,12 +100,9 @@ Singleton {
     }
   }
 
-  PanelWindow {
+  OverlayWindow {
     id: window
-    visible: root.open
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    exclusionMode: ExclusionMode.Ignore
+    active: root.open
     // without hyprland's focus grab it covers the screen so a click outside the card closes it
     anchors {
       top: !BarState.hasGrab
@@ -115,11 +112,10 @@ Singleton {
     }
     implicitWidth: 520
     implicitHeight: content.implicitHeight + 20
-    color: "transparent"
 
     MouseArea {
       anchors.fill: parent
-      enabled: !BarState.hasGrab
+      enabled: window.active && !BarState.hasGrab
       onPressed: mouse => {
         if (!card.contains(mapToItem(card, mouse.x, mouse.y)))
           root.hide();
@@ -127,13 +123,14 @@ Singleton {
     }
 
     HyprlandFocusGrab {
-      active: window.visible
+      active: window.settled
       windows: [window]
       onCleared: root.hide()
     }
 
     Rectangle {
       id: card
+      visible: window.active
       anchors.centerIn: parent
       width: 520
       height: content.implicitHeight + 20

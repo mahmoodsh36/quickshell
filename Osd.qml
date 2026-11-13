@@ -54,11 +54,10 @@ Singleton {
   // a pill above the bottom edge, or with the rail a vertical gauge sliding out of it
   readonly property bool vertical: Style.rail
 
-  PanelWindow {
+  OverlayWindow {
     screen: Focus.screen
-    visible: card.opacity > 0
-    WlrLayershell.layer: WlrLayer.Overlay
-    exclusionMode: ExclusionMode.Ignore
+    active: card.opacity > 0
+    activeFocus: WlrKeyboardFocus.None
     anchors.bottom: !root.vertical
     anchors.left: root.vertical && !Style.railRight
     anchors.right: Style.railRight
@@ -67,7 +66,6 @@ Singleton {
     margins.right: Theme.railWidth + 8
     implicitWidth: root.vertical ? 52 : 280
     implicitHeight: root.vertical ? 240 : 48
-    color: "transparent"
     // click-through
     mask: Region {}
 

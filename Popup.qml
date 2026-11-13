@@ -12,7 +12,7 @@ Scope {
   readonly property bool docked: Style.docked
   default property alias content: body.data
   // false once nothing of it is on screen, so a launch from it isn't captured
-  readonly property bool mapped: docked ? page.visible || Popups.drawerShown : win.backingWindowVisible
+  readonly property bool mapped: docked ? page.visible || Popups.drawerShown : win.active
   // unaccepted escape closes the popup
   signal keyPressed(var event)
 
@@ -25,7 +25,6 @@ Scope {
   onOpenChanged: {
     if (open)
       win.screen = Focus.screen;
-    win.visible = open && !docked;
     if (docked) {
       enter.stop();
       leave.stop();
@@ -39,13 +38,12 @@ Scope {
     leave.stop();
     page.fade = open ? 1 : 0;
     page.slide = 0;
-    win.visible = open && !docked;
     if (open)
       Qt.callLater(() => page.forceActiveFocus());
   }
 
   HyprlandFocusGrab {
-    active: !root.docked && win.visible
+    active: win.settled
     windows: [win].concat(Array.from(Popups.barWindows))
     onCleared: Popups.close(root.name)
   }
@@ -118,10 +116,12 @@ Scope {
     }
   }
 
-  PanelWindow {
+  OverlayWindow {
     id: win
-    visible: false
-    WlrLayershell.keyboardFocus: BarState.hasGrab ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive
+    active: root.open && !root.docked
+    visible: used && !root.docked
+    activeLayer: WlrLayer.Top
+    activeFocus: BarState.hasGrab ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive
     anchors {
       top: true
       left: root.side === "left"
@@ -132,14 +132,13 @@ Scope {
       left: root.side === "left" ? Theme.popupMargin : 0
       right: root.side === "right" ? Theme.popupMargin : 0
     }
-    // ignore the bar reservation so margins measure from the screen edge
-    exclusionMode: ExclusionMode.Ignore
+    // OverlayWindow ignores the bar reservation, so margins measure from the screen edge
     implicitWidth: Theme.popupWidth
     implicitHeight: page.height + 32
-    color: "transparent"
 
     Rectangle {
       id: frame
+      visible: win.active
       anchors.fill: parent
       color: Theme.bg
       border.width: 1

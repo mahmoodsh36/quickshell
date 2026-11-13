@@ -11,7 +11,8 @@ Rectangle {
   color: Theme.bg2
 
   Rectangle {
-    width: Math.max(meter.height, meter.width * Math.min(1, Math.max(0, meter.value)))
+    // whole pixels, so sub pixel jitter doesn't animate
+    width: Math.round(Math.max(meter.height, meter.width * Math.min(1, Math.max(0, meter.value))))
     height: meter.height
     radius: meter.radius
     color: meter.fill

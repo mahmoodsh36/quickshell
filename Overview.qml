@@ -165,23 +165,20 @@ Singleton {
     onTriggered: Hyprland.refreshToplevels()
   }
 
-  PanelWindow {
+  OverlayWindow {
     id: window
-    visible: root.open || root.progress > 0
-    WlrLayershell.layer: WlrLayer.Overlay
+    active: root.open || root.progress > 0
+    activeFocus: root.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell-overview"
-    WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    exclusionMode: ExclusionMode.Ignore
     anchors {
       top: true
       bottom: true
       left: true
       right: true
     }
-    color: "transparent"
 
     HyprlandFocusGrab {
-      active: window.visible && root.open
+      active: window.settled && root.open
       windows: [window]
       onCleared: root.hide()
     }
@@ -189,7 +186,8 @@ Singleton {
     Item {
       id: stage
       anchors.fill: parent
-      readonly property url wallpaper: window.visible ? Wallpapers.url(Persist.wallpaper) : ""
+      visible: window.active
+      readonly property url wallpaper: window.active ? Wallpapers.url(Persist.wallpaper) : ""
 
       // blurred at quarter resolution and scaled up, as in WallpaperPicker
       Item {
@@ -460,7 +458,7 @@ Singleton {
               ScreencopyView {
                 id: shot
                 anchors.fill: parent
-                captureSource: window.visible ? win.modelData.wayland : null
+                captureSource: window.active ? win.modelData.wayland : null
                 live: root.open
               }
             }

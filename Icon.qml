@@ -14,8 +14,10 @@ Text {
   horizontalAlignment: Text.AlignHCenter
   verticalAlignment: Text.AlignVCenter
 
-  RotationAnimator on rotation {
-    running: icon.spinning
+  // not an Animator: those run on the render thread without frame throttling on wayland (hundreds of fps)
+  RotationAnimation on rotation {
+    // a hidden spinner (a closed page in a drawer) would still redraw its window
+    running: icon.spinning && icon.visible
     from: 0
     to: 360
     duration: 1600

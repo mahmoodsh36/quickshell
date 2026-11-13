@@ -10,7 +10,8 @@ Item {
   property color track: Theme.bg2
   default property alias content: inner.data
 
-  property real shown: Math.max(0, Math.min(1, value))
+  // whole percents: polled values jitter, and each change animates (redrawing the window) for 400ms
+  property real shown: Math.round(Math.max(0, Math.min(1, value)) * 100) / 100
   Behavior on shown {
     NumberAnimation {
       duration: 400

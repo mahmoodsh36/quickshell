@@ -245,23 +245,20 @@ Singleton {
     }
   }
 
-  PanelWindow {
+  OverlayWindow {
     id: window
-    visible: root.open || stage.shown > 0
-    WlrLayershell.layer: WlrLayer.Overlay
+    active: root.open || stage.shown > 0
+    activeFocus: root.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     WlrLayershell.namespace: "quickshell-wallpaper-picker"
-    WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    exclusionMode: ExclusionMode.Ignore
     anchors {
       top: true
       bottom: true
       left: true
       right: true
     }
-    color: "transparent"
 
     HyprlandFocusGrab {
-      active: window.visible && root.open
+      active: window.settled && root.open
       windows: [window]
       onCleared: root.hide()
     }
@@ -269,6 +266,7 @@ Singleton {
     Item {
       id: stage
       anchors.fill: parent
+      visible: window.active
       property real shown: root.open ? 1 : 0
       Behavior on shown {
         NumberAnimation {
