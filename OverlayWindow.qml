@@ -4,6 +4,7 @@ import QtQuick
 
 // once used, parks in the background layer (empty, click through, unfocused) instead of unmapping:
 // a remap rebuilds the window's graphics context, which costs 100ms or more per open on virgl.
+// parked windows keep their buffers; Config.keepWindows off unmaps instead.
 // content should hide itself while !active
 PanelWindow {
   id: win
@@ -16,7 +17,7 @@ PanelWindow {
   readonly property bool settled: swaps >= 2
   property int swaps: 0
   onActiveChanged: {
-    if (active)
+    if (active && Config.keepWindows)
       used = true;
     swaps = 0;
   }

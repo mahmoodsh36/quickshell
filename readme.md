@@ -11,6 +11,8 @@ top that morphs into activities and popups) and `dock` (floating dock, popups ri
 `qs ipc call overview toggle` opens a workspace overview, `qs ipc call media toggle` the media page.
 weather comes from open-meteo for Haifa by default; set `QS_WEATHER_LOCATION="lat,lon,name"` (and
 optionally `QS_WEATHER_UNIT=fahrenheit`) through the module's `env` option to change it.
+overlays (launcher, overview, popups, osd) stay mapped but hidden after first use so they reopen
+instantly, which keeps their buffers in gpu memory; `QS_KEEP_WINDOWS=0` unmaps them instead.
 
 works under hyprland and niri. on niri, workspaces and windows come from `niri msg --json event-stream`,
 the overview opens niri's own, and popups close on outside clicks by covering the screen since niri has

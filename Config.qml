@@ -17,6 +17,8 @@ Singleton {
   // "lat,lon,name" and an open-meteo temperature_unit
   readonly property string weatherLocation: env("QS_WEATHER_LOCATION", "32.794,34.989,Haifa")
   readonly property string weatherUnit: env("QS_WEATHER_UNIT", "celsius")
+  // 0 unmaps overlays when closed (see OverlayWindow): frees their buffers, but each open is slower
+  readonly property bool keepWindows: env("QS_KEEP_WINDOWS", "1") !== "0"
 
   // generated theme outputs other apps read; must match theming/matugen.toml
   readonly property string themeDir: env("XDG_STATE_HOME", home + "/.local/state") + "/theme"
